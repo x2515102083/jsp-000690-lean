@@ -1,0 +1,35 @@
+name: Verify Lean proof
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596
+        with:
+          auto-config: "false"
+          build: "true"
+          test: "false"
+          lint: "false"
+          use-mathlib-cache: "false"
+          use-github-cache: "false"
+          leanchecker: "true"
+          leanchecker-args: "--fresh --verbose JSP690"
+      - name: Check complete axiom allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake env lean Audit.lean | python3 scripts/audit_axioms.py
+      - name: Auxiliary exhaustive cross-check
+        run: python3 scripts/crosscheck.py
+      - name: Audit parser regression tests
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
