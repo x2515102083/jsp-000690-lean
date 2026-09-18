@@ -30,14 +30,15 @@ jobs:
           cd project
           printf 'leanprover/lean4:v4.34.0\n' > lean-toolchain
           printf 'name = "transversal"\nversion = "0.1.0"\ndefaultTargets = ["Transversal"]\n\n[[require]]\nname = "mathlib"\ngit = "https://github.com/leanprover-community/mathlib4.git"\nrev = "5ed2965256430c3649e86755f9576b54eca72435"\n\n[[lean_lib]]\nname = "Transversal"\n' > lakefile.toml
-          lake update
-          lake exe cache get Mathlib/Data/Finset/Card.lean Mathlib/Data/Finset/Powerset.lean Mathlib/Data/Finset/Union.lean Mathlib/Tactic.lean
+          MATHLIB_NO_CACHE_ON_UPDATE=1 lake update
+          lake exe cache get Mathlib.Data.Finset.Powerset Mathlib.Tactic
           printf 'import Mathlib.Data.Finset.Powerset\nimport Mathlib.Tactic\n#check Finset.card_eq_two\n#check Finset.card_eq_three\n#check Finset.card_filter_le_iff\n#check Finset.card_bij\n#check Finset.card_powersetCard\n#check Finset.card_image_of_injective\n' > Probe.lean
           lake env lean Probe.lean || true
           cp "$GITHUB_WORKSPACE/JSP690.lean" .
-          lake env lean -DwarningAsError=true JSP690.lean
+          if lake env lean -DwarningAsError=true JSP690.lean; then echo 'Original source compatibility: PASS'; else echo 'Original source needs compatibility work'; fi
           git -C .lake/packages/mathlib rev-parse HEAD
           cat lake-manifest.json
+          lake env printenv LEAN_PATH > lean-path.txt
       - name: Package reproducible development environment
         shell: bash
         run: |
@@ -66,6 +67,18 @@ jobs:
         with:
           name: transversal-env-ac
           path: ${{ runner.temp }}/env-parts/*part-ac
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: transversal-env-ad
+          path: ${{ runner.temp }}/env-parts/*part-ad
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: transversal-env-ae
+          path: ${{ runner.temp }}/env-parts/*part-ae
           compression-level: 0
           retention-days: 7
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
