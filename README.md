@@ -1,88 +1,76 @@
-# JSP-000690: complete chromatic-critical hypergraph formalization
+# JSP-000690 / Erdos 834: both interpretations
 
-This Lean 4 project proves the **chromatic** formulation of
-[JSP-000690](https://github.com/TheJustinSunPrize/awards/blob/main/problems/catalog-0601-0700.md#JSP-000690):
-there exists a simple 3-uniform hypergraph with chromatic number exactly 3,
-every proper subhypergraph 2-colorable, and minimum degree at least 7.
+This branch extends the earlier chromatic-only package. It does not change the
+catalog's stated problem or assert an award. The combined target is
+`JSP690Complete.erdos834_both` in `Complete690.lean`.
 
-The mathematical construction is **Ruiliang Li's**, not a new discovery here.
-It is the nine-vertex, twenty-two-edge graph in equation (5) of
-[arXiv:2512.24850v1](https://arxiv.org/html/2512.24850v1#S4).
-The minimum degree is exactly 7; the degrees are `(10,7,7,7,7,7,7,7,7)`.
+## Results and scope
 
-This is a later, separately written formalization prepared with OpenAI Codex
-for the GitHub account `x2515102083`. Earlier formalizations and submissions
-exist. **No first-formalization priority, independent human review, new
-mathematical solution, or award entitlement is claimed.** See
-[ATTRIBUTION.md](ATTRIBUTION.md) for the disclosure and prior-work links.
+The chromatic clause supplies Li's 9-vertex, 22-edge example: a simple
+three-uniform hypergraph with weak chromatic number exactly three, every proper
+subhypergraph two-colourable, and attained minimum degree seven. The original
+`JSP690.lean` implementation is retained.
 
-## Reproduce
+The transversal clause proves, for arbitrary finite hypergraphs satisfying
+`tau(H)=3` and `tau(H-e)=2` for every edge, that **every vertex has degree at most
+six**. In particular, minimum degree seven is impossible at every vertex count.
+A separately checked complete three-graph on five vertices attains degree six.
+This is a complete negative answer, not a bounded search. The pointwise theorem
+`JSP690Transversal.degree_le_six` even allows an arbitrary ambient type.
 
-Install [elan](https://github.com/leanprover/elan), then run:
+The source question has two non-equivalent meanings of criticality, giving
+opposite answers. See [statement mapping](STATEMENT.md), the original problem
+at https://www.erdosproblems.com/834 and Li's paper
+https://arxiv.org/html/2512.24850v1 . This package is not a formalization of every
+theorem in that paper: in particular it does not claim its separate ten-edge
+bound as a new formal theorem.
 
-```sh
-git clone --branch proof-jsp-000690 https://github.com/x2515102083/jsp-000690-lean.git
-cd jsp-000690-lean
-lake build
-lake env lean Audit.lean
-lake env leanchecker --verbose JSP690
-lake env leanchecker --fresh --verbose JSP690
-python3 scripts/crosscheck.py
-```
+## Build and verification
 
-Alternatively, `python3 scripts/verify.py --clean` performs a clean build,
-the fail-closed axiom audit, both replay modes, the finite cross-check, and
-seven regression tests of the audit parser, checking every exit status.
-
-For a fail-closed axiom allowlist check (Bash):
+Lean `4.34.0`, Mathlib `5ed2965256430c3649e86755f9576b54eca72435`. The manifest pins
+all nine dependencies. Install the toolchain in `lean-toolchain`, then run:
 
 ```sh
-set -o pipefail
-lake env lean Audit.lean | python3 scripts/audit_axioms.py
+lake exe cache get Mathlib.Data.Finset.Powerset Mathlib.Tactic
+python3 scripts/verify_complete.py
 ```
 
-The toolchain is pinned to `leanprover/lean4:v4.35.0-rc2`, release commit
-`11acb17ec6b07a8f9e9173e6845197929540936b`. This is an explicitly pinned
-release candidate, not a claim that prize maintainers have approved that version.
-Only bundled `Std`/Lean libraries are imported. **No Mathlib and no external
-Lake packages are required.** The Python scripts require only the standard
-library and are not used to construct or justify the Lean proof.
+`lake build` builds all three modules. The verification script freshly
+elaborates their sources with warnings treated as errors, inventories every
+local theorem/lemma, checks each complete axiom closure against
+`propext`, `Classical.choice`, `Quot.sound`, prints the definitions and main
+statement types, replays each local module using bundled `leanchecker`, runs
+both auxiliary cross-checks and the audit regression tests, and rejects source
+or lockfile changes. A missing target report is a failure. Finite certificates
+use ordinary `decide`, not native evaluation.
 
-## What the theorem actually proves
+The `Verify both interpretations` workflow runs this procedure on a fresh
+checkout. An actual successful run for the selected commit is required;
+the existence of workflow code or this README is not proof that a run passed.
+Actual logs and a JSON receipt are produced under `evidence-complete/` and in
+the workflow artifact. `VERIFICATION.md` is the historical chromatic-only
+receipt for the old commit, not evidence for this extension.
 
-The entry point is `JSP690.jsp000690` in [JSP690.lean](JSP690.lean).
+The same Lean kernel is used for elaboration and replay. Mathlib's compiled
+cache and imported declarations are reused. This is not a separate kernel
+implementation, an all-dependencies source rebuild, independent human review,
+or organizer-designated verification.
 
-| Mathematical requirement | Lean declaration / representation |
-| --- | --- |
-| Finite vertex set | `Fin 9`; the paper's labels `1..9` become `0..8` |
-| Simple 3-uniform hypergraph | `liGraph_simple`: duplicate-free list of strictly increasing triples |
-| All binary colorings fail | `binary_obstruction` and the general `binaryColorings_complete` theorem |
-| Chromatic number exactly 3 | `liGraph_chromatic_number`: proper 3-coloring and no `m`-coloring for any `m < 3` |
-| Every edge deletion has chromatic number exactly 2 | `liGraph_deleted_edge_chromatic_two` |
-| Every vertex deletion has chromatic number exactly 2 | `liGraph_deleted_vertex_chromatic_two` |
-| Every proper subhypergraph is 2-colorable | `liGraph_all_proper_subgraphs`, with arbitrary surviving vertex predicate and edge sublist |
-| Minimum degree exactly 7 | `liGraph_minimum_degree` and `liGraph_degrees` |
+## Attribution and overlap
 
-Coloring is **weak** hypergraph coloring: each triple must contain two
-differently colored vertices. It is not rainbow/strong coloring. For a vertex
-deletion, the color on the removed vertex is irrelevant: the quantified total
-function restricts to a coloring of the surviving vertices. The auxiliary
-Python test separately enumerates colorings on the eight surviving vertices.
+Mathematical resolution: Ruiliang Li. The elementary link argument is related
+to classical set-pairs bounds; no new mathematical discovery is claimed.
+Public contributor account: `x2515102083`, with OpenAI Codex/ChatGPT assistance.
+See [original attribution](ATTRIBUTION.md) and
+[extension attribution and comparison](TRANSVERSAL_ATTRIBUTION.md).
 
-The finite checks use Lean's kernel-reduced `decide`. The completeness lemma
-proves that enumeration covers **every** function `Fin n → Bool`; an unproved
-claim that a mask search is exhaustive is not assumed. The main theorem has no
-unproved mathematical premises and no placeholder proof terms.
+**A prior plby formalization already covers both interpretations.** This
+extension is not the first complete formalization. Its new implementation
+component in this repository is the pointwise link-degree argument and
+integration, not ownership of earlier results. Source excerpts of the prior
+proof were inspected for comparison after the first local development commit;
+that proof is not imported or copied into this package.
 
-## Scope and prize status
-
-This proves the full chromatic question explicitly stated in the current JSP
-catalog and Li's Theorem 1.2. It does **not** prove the separate transversal
-number (`tau`-criticality) theorem, does not formalize every result in Li's paper,
-and does not resolve competing priority claims.
-
-See [VERIFICATION.md](VERIFICATION.md) for the actual verification record.
-Repository CI and local verification are not prize approval. Submission,
-statement review, safe-toolchain review, attribution, priority, identity checks,
-award assessment, and payment remain separate official decisions. No private
-contact details, identity documents, or payment addresses are included here.
+No independent human reviewer, verified recipient identity, first-publication
+priority, award tier, prize amount or entitlement to payment is asserted.
+Existing catalog PR: TheJustinSunPrize/awards#842; updates should reuse it.

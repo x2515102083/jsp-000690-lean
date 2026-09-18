@@ -1,35 +1,53 @@
-name: Verify Lean proof
-
+name: Verify both interpretations
 on:
   push:
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   proof:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          auto-config: "false"
-          build: "true"
-          test: "false"
-          lint: "false"
-          use-mathlib-cache: "false"
-          use-github-cache: "false"
-          leanchecker: "true"
-          leanchecker-args: "--fresh --verbose JSP690"
-      - name: Check complete axiom allowlist
+          persist-credentials: false
+      - name: Install hash-verified Lean 4.34.0
         shell: bash
         run: |
           set -euo pipefail
-          lake env lean Audit.lean | python3 scripts/audit_axioms.py
-      - name: Auxiliary exhaustive cross-check
-        run: python3 scripts/crosscheck.py
-      - name: Audit parser regression tests
-        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+          cd "$RUNNER_TEMP"
+          curl --fail --location --retry 3 https://github.com/leanprover/lean4/releases/download/v4.34.0/lean-4.34.0-linux.tar.zst -o lean-4.34.0-linux.tar.zst
+          echo 'caaa98356098c85dc0fcbbd28e1ec66f39eb6551829972b752ff20e1286b646b  lean-4.34.0-linux.tar.zst' | sha256sum --check
+          tar --zstd -xf lean-4.34.0-linux.tar.zst
+          echo "$RUNNER_TEMP/lean-4.34.0-linux/bin" >> "$GITHUB_PATH"
+      - name: Fetch pinned dependency cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake exe cache get Mathlib.Data.Finset.Powerset Mathlib.Tactic
+          git diff --exit-code -- lean-toolchain lake-manifest.json lakefile.toml
+      - name: Build, audit all declarations, replay, and cross-check
+        run: python3 scripts/verify_complete.py
+      - name: Archive source and actual verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jsp690-complete-evidence
+          path: |
+            evidence-complete/
+            JSP690.lean
+            Transversal.lean
+            Complete690.lean
+            AuditGenerated.lean
+            StatementAudit.lean
+            lean-toolchain
+            lakefile.toml
+            lake-manifest.json
+            README.md
+            STATEMENT.md
+            TRANSVERSAL_ATTRIBUTION.md
+            ATTRIBUTION.md
+            scripts/
+          retention-days: 30

@@ -1,9 +1,8 @@
 .lake/
-work/
 *.olean
 *.ilean
-*.c
-*.o
 *.trace
 __pycache__/
-.DS_Store
+evidence-complete/
+AuditGenerated.lean
+StatementAudit.lean
