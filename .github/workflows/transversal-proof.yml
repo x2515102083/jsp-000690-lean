@@ -1,0 +1,52 @@
+name: Transversal proof development
+on:
+  push:
+    branches: ['proof/both-interpretations-20260918']
+    paths: ['Transversal.lean', 'Complete690.lean', '.github/workflows/transversal-proof.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Exact toolchain and dependency environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/transversal"
+          cd "$RUNNER_TEMP/transversal"
+          curl --fail --location --retry 3 https://github.com/leanprover/lean4/releases/download/v4.34.0/lean-4.34.0-linux.tar.zst -o lean.tar.zst
+          echo 'caaa98356098c85dc0fcbbd28e1ec66f39eb6551829972b752ff20e1286b646b  lean.tar.zst' | sha256sum --check
+          tar --zstd -xf lean.tar.zst
+          echo "$PWD/lean-4.34.0-linux/bin" >> "$GITHUB_PATH"
+          export PATH="$PWD/lean-4.34.0-linux/bin:$PATH"
+          mkdir project
+          cd project
+          printf 'leanprover/lean4:v4.34.0\n' > lean-toolchain
+          printf 'name = "transversal"\nversion = "0.1.0"\n[[require]]\nname = "mathlib"\ngit = "https://github.com/leanprover-community/mathlib4.git"\nrev = "5ed2965256430c3649e86755f9576b54eca72435"\n[[lean_lib]]\nname = "Transversal"\n' > lakefile.toml
+          MATHLIB_NO_CACHE_ON_UPDATE=1 lake update
+          lake exe cache get Mathlib.Data.Finset.Powerset Mathlib.Tactic
+          cp "$GITHUB_WORKSPACE/Transversal.lean" .
+          cp "$GITHUB_WORKSPACE/JSP690.lean" .
+      - name: Compile exact proposed transversal source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/transversal/project"
+          lean --version
+          sha256sum Transversal.lean
+          lake env lean -DwarningAsError=true -o Transversal.olean Transversal.lean 2>&1 | tee compile.log
+      - name: Archive development result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: transversal-development-log
+          path: |
+            ${{ runner.temp }}/transversal/project/compile.log
+            ${{ runner.temp }}/transversal/project/lake-manifest.json
+            ${{ runner.temp }}/transversal/project/Transversal.lean
+          retention-days: 7
