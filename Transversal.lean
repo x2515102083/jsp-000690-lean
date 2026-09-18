@@ -98,7 +98,7 @@ lemma pair_card_le_five_of_degree_le_two {E : Finset (Finset V)}
         _ = B.card * 2 := by simp
         _ ≤ 4 := by omega
     have hcard := Finset.card_erase_of_mem he
-    have hpos := Finset.card_pos.mpr hn
+    have hpos := Finset.card_pos.mpr (show E.Nonempty from ⟨e, he⟩)
     omega
   · simp [Finset.not_nonempty_iff_eq_empty.mp hn]
 
@@ -123,7 +123,12 @@ lemma forced_pair_witness {E : Finset (Finset V)} {x a b c : V}
     rcases hz with rfl | rfl
     · exact (hxB hzB).elim
     · exact hzB
-  have hsub : ({b,c} : Finset V) ⊆ B := by simp [hbB, hcB]
+  have hsub : ({b,c} : Finset V) ⊆ B := by
+    intro z hz
+    rcases Finset.mem_insert.mp hz with rfl | hz
+    · exact hbB
+    · have hz' : z = c := Finset.mem_singleton.mp hz
+      exact hz' ▸ hcB
   have heq : B = {b,c} := by
     symm
     apply Finset.eq_of_subset_of_card_le hsub
@@ -151,7 +156,7 @@ lemma meets_three_pairs {f : Finset V} {a b c : V} (hf : f.card = 2)
 theorem pair_card_le_six {E : Finset (Finset V)} (hE : PairCritical E) : E.card ≤ 6 := by
   by_cases hdeg : ∀ x, degree E x ≤ 2
   · exact (pair_card_le_five_of_degree_le_two hE hdeg).trans (by decide)
-  · push_neg at hdeg
+  · push Not at hdeg
     obtain ⟨x, hx⟩ := hdeg
     have hx3 : degree E x = 3 := by have := pair_degree_le_three hE x; omega
     obtain ⟨e1, e2, e3, h12, h13, h23, heq⟩ := Finset.card_eq_three.mp hx3
@@ -283,6 +288,8 @@ theorem completeFive_uniform : ∀ e ∈ completeFive, e.card = 3 := by
   exact (Finset.mem_powersetCard.mp he).2
 
 theorem completeFive_critical : TauCriticalThree completeFive := by
+  letI : Fintype (Finset (Fin 5)) :=
+    ⟨(Finset.univ : Finset (Fin 5)).powerset, by intro s; simp⟩
   unfold TauCriticalThree TauExactly Covers Hits completeFive
   decide
 
