@@ -287,11 +287,44 @@ theorem completeFive_uniform : ∀ e ∈ completeFive, e.card = 3 := by
   intro e he
   exact (Finset.mem_powersetCard.mp he).2
 
-theorem completeFive_critical : TauCriticalThree completeFive := by
-  letI : Fintype (Finset (Fin 5)) :=
-    ⟨(Finset.univ : Finset (Fin 5)).powerset, by intro s; simp⟩
-  unfold TauCriticalThree TauExactly Covers Hits completeFive
+/-- All 32 vertex subsets, with completeness proved for arbitrary finite sets. -/
+def fiveSubsets : Finset (Finset (Fin 5)) :=
+  (Finset.univ : Finset (Fin 5)).powerset
+
+lemma fiveSubsets_complete (T : Finset (Fin 5)) : T ∈ fiveSubsets := by
+  simp [fiveSubsets]
+
+theorem completeFive_cover_certificate :
+    ∃ T ∈ fiveSubsets, T.card = 3 ∧ Covers completeFive T := by
+  unfold fiveSubsets Covers Hits completeFive
   decide
+
+theorem completeFive_no_small_cover_certificate :
+    ∀ T ∈ fiveSubsets, T.card < 3 → ¬ Covers completeFive T := by
+  unfold fiveSubsets Covers Hits completeFive
+  decide
+
+theorem completeFive_deletion_certificates :
+    ∀ e ∈ completeFive,
+      (∃ T ∈ fiveSubsets, T.card = 2 ∧ Covers (completeFive.erase e) T) ∧
+      (∀ T ∈ fiveSubsets, T.card < 2 → ¬ Covers (completeFive.erase e) T) := by
+  unfold fiveSubsets Covers Hits completeFive
+  decide
+
+theorem completeFive_critical : TauCriticalThree completeFive := by
+  constructor
+  · constructor
+    · obtain ⟨T, _, hT, hc⟩ := completeFive_cover_certificate
+      exact ⟨T, hT, hc⟩
+    · intro T hT
+      exact completeFive_no_small_cover_certificate T (fiveSubsets_complete T) hT
+  · intro e he
+    obtain ⟨hex, hsmall⟩ := completeFive_deletion_certificates e he
+    constructor
+    · obtain ⟨T, _, hT, hc⟩ := hex
+      exact ⟨T, hT, hc⟩
+    · intro T hT
+      exact hsmall T (fiveSubsets_complete T) hT
 
 theorem completeFive_degrees : ∀ v : Fin 5, degree completeFive v = 6 := by
   unfold degree completeFive
