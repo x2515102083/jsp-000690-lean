@@ -1,6 +1,17 @@
-name = "jsp000690"
-version = "1.0.0"
-defaultTargets = ["JSP690"]
+name = "jsp000690complete"
+version = "0.2.0"
+defaultTargets = ["Complete"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "520045ab14e26149ee970e2e617ca04b09bde5d6"
 
 [[lean_lib]]
 name = "JSP690"
+
+[[lean_lib]]
+name = "Transversal"
+
+[[lean_lib]]
+name = "Complete"

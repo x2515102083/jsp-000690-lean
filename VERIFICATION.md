@@ -1,68 +1,25 @@
-# Verification record
+# Verification record and trust boundary
 
-## Scope and trust boundary
+## Local verification observed on September 18, 2026
 
-This is a submitter-run verification record for `JSP690.jsp000690`, not an
-official prize verification decision and not independent human peer review.
-The exact statement and its interpretation are described in [README.md](README.md).
-Mathematical and prior-formalization credits are in [ATTRIBUTION.md](ATTRIBUTION.md).
+All three local modules (`JSP690`, `Transversal`, `Complete`) were elaborated from source with pinned stable Lean 4.32.1 and `-DwarningAsError=true`, with exit code zero. `Audit.lean` was also elaborated successfully. Its twelve named roots report only the standard axioms `propext`, `Classical.choice`, and `Quot.sound` (or subsets). The original chromatic source is unchanged and now compiles on this stable toolchain.
 
-## Pinned environment
+`leanchecker --verbose JSP690 Transversal Complete` completed successfully, replaying all three local modules. This is normal per-module replay with imported dependencies, **not** `--fresh` replay of the full import closure. Local attempts at the latter reached their time limits and are not claimed as successful checks.
 
-- Lean: `leanprover/lean4:v4.35.0-rc2`.
-- Lean release commit: `11acb17ec6b07a8f9e9173e6845197929540936b`.
-- Lake: bundled Lake 5.0.0.
-- Local test platform: Windows x86-64.
-- Dependencies: bundled Lean/Std only; `lake-manifest.json` has no packages.
-- `decide` uses kernel reduction. No native-code decision axiom is used.
-- This is a release-candidate toolchain. Maintainer approval of its safety or
-  acceptability has not been obtained; no such approval is implied.
+Ten fail-closed axiom-parser regression tests pass, including rejection of missing and repeated targets, malformed/truncated reports, unknown roots, `sorryAx`, native-reduction axioms and a custom axiom. The auxiliary transversal enumeration checks all 1,049,618 labelled simple three-uniform hypergraphs on 3, 4, 5 and 6 vertices; all 1,897 transversal-three-critical cases it identifies have maximum degree at most six. The original chromatic cross-check is retained as a separate auxiliary computation. These computations are not premises of the Lean proof.
 
-## Observed local checks, 2026-09-18 (Asia/Shanghai)
+The local environment used compiled imports retrieved from the exact Mathlib cache, with source snapshots rather than ordinary Git dependency checkouts. Therefore the local result is reported as direct source elaboration and replay, **not** a locally observed fresh `lake build` or successful local bootstrap.
 
-The full `scripts/verify.py --clean` run completed with all commands successful,
-including a clean build and all seven axiom-parser tests. Both
-`lake env leanchecker --verbose JSP690` and
-`lake env leanchecker --fresh --verbose JSP690` completed successfully.
-The second command replays imported and project declarations into a fresh
-environment. `leanchecker` uses Lean's own kernel; it is **not** an independently
-implemented proof checker. No nanoda/lean4lean result or sandbox isolation
-certification is claimed.
+## Reproducible CI
 
-`lake env lean Audit.lean` printed the following dependency sets:
+The workflow `.github/workflows/verify.yml` installs the official pinned Lean release archive and checks SHA-256 `57d5c062a6b4bae6fba511a1704aa124dff461c37d0fc94585637fbb7d951b50`. Its release commit is `f054605aea4b840552cca2e725580bffd1e1b704`.
 
-| Declaration | Axioms |
-| --- | --- |
-| `binaryColorings_complete` | `propext`, `Quot.sound` |
-| `binary_obstruction` | `propext` |
-| `edge_deletion_certificates` | `propext`, `Classical.choice`, `Quot.sound` |
-| `vertex_deletion_certificates` | `propext`, `Classical.choice`, `Quot.sound` |
-| `liGraph_chromatic_number` | `propext`, `Quot.sound` |
-| `liGraph_all_proper_subgraphs` | `propext`, `Classical.choice`, `Quot.sound` |
-| `liGraph_deleted_edge_chromatic_two` | `propext`, `Classical.choice`, `Quot.sound` |
-| `liGraph_deleted_vertex_chromatic_two` | `propext`, `Classical.choice`, `Quot.sound` |
-| `jsp000690` | `propext`, `Classical.choice`, `Quot.sound` |
+A clean checkout runs `bootstrap.py` to retrieve and check all nine exact dependency revisions, then fetches compiled Mathlib imports. `scripts/verify.py` runs `lake build`, fresh warning-as-error elaboration, the twelve-root axiom audit, normal per-module kernel replay, regression tests and auxiliary computations. Dependency revisions, audited source hashes and lockfiles are checked before and after.
 
-The fully qualified namespace is `JSP690`. No final audited declaration depends
-on `sorryAx`, `Lean.ofReduceBool`, or a project-defined mathematical axiom.
+A run is successful only if its `verification-output/summary.json` reports `success: true` and all required workflow steps pass for the selected commit. The workflow records `GITHUB_SHA` and archives that exact source tree. Its URL and completed outcome must be read before they are used as evidence in PR #842; this source document does not predict a run's result.
 
-The separate Python cross-check confirmed all 512 binary colorings fail, an
-explicit three-coloring succeeds, all 22 edge deletions and all 9 vertex deletions
-admit binary colorings, and the vertex degrees are `(10,7,7,7,7,7,7,7,7)`.
-The Python calculation is corroboration, not a premise of any Lean theorem.
+## Limits
 
-## Reproducibility and limitations
+All checks are contributor-run. Leanchecker uses Lean's own kernel, not an independent kernel implementation or human mathematical referee. Imported compiled Lean/Mathlib files are trusted; this is not a source rebuild or fresh replay of every imported declaration. The separately coded Python checkers were developed in the same AI-assisted effort, not by independent reviewers. The workflow has read-only repository permissions, but no formal network-isolation attestation is made.
 
-Run `python3 scripts/verify.py --clean` to repeat all local checks. The script
-checks subprocess exit codes; the axiom parser requires all nine reports and
-rejects unexpected axioms. Parser tests also check rejection of missing reports,
-duplicate reports, explicit Lean errors, placeholder axioms, native trust, and
-custom axioms.
-
-The public workflow rebuilds on a Linux runner using the pinned toolchain and
-without project build-cache reuse. Workflow success, when present, is additional
-machine evidence, not official award review. Consult the actual workflow run
-rather than interpreting the existence of the workflow as proof it ran.
-
-This project does not certify Lean/Std's implementation, settle prize priority,
-verify recipient identity, or authorize a payment. Earlier formalizations exist.
+A source hash proves identity of bytes, not theorem correspondence or prize eligibility. Read PROOF.md, the actual definitions printed by Audit.lean, the pinned source and ATTRIBUTION.md. Organizer-designated verification, chronological priority, contribution assessment, recipient checks and any award decision remain separate and unconfirmed.

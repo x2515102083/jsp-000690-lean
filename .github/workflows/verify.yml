@@ -1,35 +1,47 @@
-name: Verify Lean proof
-
+name: Verify complete two-reading proof
 on:
   push:
+    branches: [proof-both-readings-20260918]
   pull_request:
-  workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  proof:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          auto-config: "false"
-          build: "true"
-          test: "false"
-          lint: "false"
-          use-mathlib-cache: "false"
-          use-github-cache: "false"
-          leanchecker: "true"
-          leanchecker-args: "--fresh --verbose JSP690"
-      - name: Check complete axiom allowlist
-        shell: bash
+          persist-credentials: false
+      - name: Install and verify the pinned official Lean release
         run: |
           set -euo pipefail
-          lake env lean Audit.lean | python3 scripts/audit_axioms.py
-      - name: Auxiliary exhaustive cross-check
-        run: python3 scripts/crosscheck.py
-      - name: Audit parser regression tests
-        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/leanprover/lean4/releases/download/v4.32.1/lean-4.32.1-linux.tar.zst -o /tmp/lean.tar.zst
+          echo '57d5c062a6b4bae6fba511a1704aa124dff461c37d0fc94585637fbb7d951b50  /tmp/lean.tar.zst' | sha256sum -c -
+          mkdir /tmp/lean
+          tar --zstd -xf /tmp/lean.tar.zst -C /tmp/lean --strip-components=1
+          rm /tmp/lean.tar.zst
+          echo /tmp/lean/bin >> "$GITHUB_PATH"
+          /tmp/lean/bin/lean --version
+      - name: Prepare exact dependency revisions and compiled cache
+        run: |
+          set -euo pipefail
+          python3 bootstrap.py
+          lake exe cache get .lake/packages/mathlib/Mathlib/Data/Finset/Powerset.lean .lake/packages/mathlib/Mathlib/Data/Finset/Prod.lean .lake/packages/mathlib/Mathlib/Data/Fintype/Powerset.lean
+          git diff --exit-code -- lean-toolchain lakefile.toml lake-manifest.json
+      - name: Build, elaborate, audit, replay and cross-check
+        run: python3 scripts/verify.py
+      - name: Require unchanged audited sources
+        run: git diff --exit-code
+      - name: Archive exact source and generated evidence
+        if: always()
+        run: |
+          mkdir -p verification-output
+          git rev-parse HEAD > verification-output/checked-commit.txt
+          git archive --format=tar.gz -o verification-output/proof-source.tar.gz HEAD
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: complete-two-reading-evidence
+          path: verification-output/
+          retention-days: 90

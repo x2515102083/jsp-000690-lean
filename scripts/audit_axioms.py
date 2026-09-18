@@ -1,45 +1,52 @@
-"""Fail closed unless all expected Lean axiom reports use only the allowlist.
-
-Usage: lake env lean Audit.lean | python3 scripts/audit_axioms.py
-The caller must also check the Lean command's exit status (e.g. bash pipefail).
-"""
-
+"""Fail closed unless every named root reports only the standard Lean axioms."""
+from __future__ import annotations
 import re
 import sys
+from pathlib import Path
+
+ALLOWED = frozenset({'propext', 'Classical.choice', 'Quot.sound'})
+TARGETS = (
+    'JSP690.binaryColorings_complete',
+    'JSP690.jsp000690',
+    'JSP690Transversal.star_card_le_three',
+    'JSP690Transversal.pair_system_card_le_six',
+    'JSP690Transversal.deletion_witness',
+    'JSP690Transversal.degree_le_six',
+    'JSP690Transversal.critical_nonempty',
+    'JSP690Transversal.exists_positive_degree_le_six',
+    'JSP690Transversal.no_transversal_critical_minimum_degree_seven',
+    'JSP690Transversal.deletion_transversal_exactly_two',
+    'JSP690Transversal.complete_five_properties',
+    'JSP690Complete.complete_resolution',
+)
+PATTERN = re.compile(r"'([^']+)' depends on axioms:\s*\[([^\]]*)\]", re.MULTILINE)
 
 
-EXPECTED = {
-    "JSP690.binaryColorings_complete",
-    "JSP690.binary_obstruction",
-    "JSP690.edge_deletion_certificates",
-    "JSP690.vertex_deletion_certificates",
-    "JSP690.liGraph_chromatic_number",
-    "JSP690.liGraph_all_proper_subgraphs",
-    "JSP690.liGraph_deleted_edge_chromatic_two",
-    "JSP690.liGraph_deleted_vertex_chromatic_two",
-    "JSP690.jsp000690",
-}
-ALLOWED = {"propext", "Classical.choice", "Quot.sound"}
+def audit(text: str) -> dict[str, list[str]]:
+    matches = PATTERN.findall(text)
+    if len(matches) != len(TARGETS):
+        raise ValueError(f'Expected {len(TARGETS)} reports; found {len(matches)}')
+    result: dict[str, list[str]] = {}
+    for name, raw in matches:
+        if name not in TARGETS or name in result:
+            raise ValueError(f'Unexpected or repeated target: {name}')
+        axioms = [a.strip() for a in raw.split(',') if a.strip()]
+        if len(set(axioms)) != len(axioms):
+            raise ValueError(f'Repeated axiom in {name}')
+        unknown = set(axioms) - ALLOWED
+        if unknown:
+            raise ValueError(f'Unapproved axioms in {name}: {sorted(unknown)}')
+        result[name] = sorted(axioms)
+    if set(result) != set(TARGETS):
+        raise ValueError('Missing audited root')
+    return result
 
 
-def main():
-    text = sys.stdin.read()
-    print(text, end="")
-    reports = re.findall(r"'([^']+)' depends on axioms: \[([^\]]*)\]", text)
-    seen = set()
-    for name, raw in reports:
-        if name in seen:
-            raise SystemExit(f"Duplicate report: {name}")
-        seen.add(name)
-        unexpected = {a.strip() for a in raw.split(",") if a.strip()} - ALLOWED
-        if unexpected:
-            raise SystemExit(f"UNAPPROVED AXIOMS in {name}: {sorted(unexpected)}")
-    if seen != EXPECTED:
-        raise SystemExit(f"Missing/extra axiom reports: {sorted(seen ^ EXPECTED)}")
-    if re.search(r"\berror:|\buses 'sorry'", text):
-        raise SystemExit("Lean reported an error or placeholder")
-    print("AXIOM AUDIT PASS: all 9 expected declarations use only the allowlist.")
+def main() -> None:
+    if len(sys.argv) != 2:
+        raise SystemExit('Usage: python scripts/audit_axioms.py AXIOM_LOG')
+    result = audit(Path(sys.argv[1]).read_text(encoding='utf-8'))
+    print(f'AXIOM_AUDIT_PASS {len(result)} exact roots; standard allowlist only')
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

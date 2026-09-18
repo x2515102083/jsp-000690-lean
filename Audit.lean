@@ -1,12 +1,24 @@
-import JSP690
+import Complete
 
-#check JSP690.jsp000690
+#print JSP690.SimpleThreeUniform
+#print JSP690.ChromaticCriticalThree
+#print JSP690.AllProperSubgraphsTwoColorable
+#print JSP690Transversal.ThreeUniform
+#print JSP690Transversal.IsTransversal
+#print JSP690Transversal.TransversalCriticalThree
+#print JSP690Transversal.degree
+#check JSP690Complete.complete_resolution
+#check JSP690Transversal.degree_le_six
+#check JSP690Transversal.deletion_transversal_exactly_two
 #print axioms JSP690.binaryColorings_complete
-#print axioms JSP690.binary_obstruction
-#print axioms JSP690.edge_deletion_certificates
-#print axioms JSP690.vertex_deletion_certificates
-#print axioms JSP690.liGraph_chromatic_number
-#print axioms JSP690.liGraph_all_proper_subgraphs
-#print axioms JSP690.liGraph_deleted_edge_chromatic_two
-#print axioms JSP690.liGraph_deleted_vertex_chromatic_two
 #print axioms JSP690.jsp000690
+#print axioms JSP690Transversal.star_card_le_three
+#print axioms JSP690Transversal.pair_system_card_le_six
+#print axioms JSP690Transversal.deletion_witness
+#print axioms JSP690Transversal.degree_le_six
+#print axioms JSP690Transversal.critical_nonempty
+#print axioms JSP690Transversal.exists_positive_degree_le_six
+#print axioms JSP690Transversal.no_transversal_critical_minimum_degree_seven
+#print axioms JSP690Transversal.deletion_transversal_exactly_two
+#print axioms JSP690Transversal.complete_five_properties
+#print axioms JSP690Complete.complete_resolution

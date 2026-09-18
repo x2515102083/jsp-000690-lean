@@ -1,51 +1,31 @@
-"""Regression tests ensure the axiom-report parser fails closed."""
-
-import subprocess
-import sys
+"""Regression tests for rejecting incomplete or unsafe audit records."""
 import unittest
-from pathlib import Path
-
-from audit_axioms import EXPECTED
+from audit_axioms import TARGETS, audit
 
 
-def valid_report():
-    return "\n".join(
-        f"'{name}' depends on axioms: [propext, Classical.choice, Quot.sound]"
-        for name in sorted(EXPECTED)
-    ) + "\n"
+def good() -> str:
+    return '\n'.join(f"'{x}' depends on axioms: [propext,\n Classical.choice,\n Quot.sound]" for x in TARGETS)
 
+class AuditTests(unittest.TestCase):
+    def test_good_multiline(self):
+        self.assertEqual(len(audit(good())), 12)
+    def test_standard_subset(self):
+        self.assertEqual(len(audit(good().replace('propext,\n Classical.choice,\n Quot.sound','propext'))),12)
+    def test_missing(self):
+        with self.assertRaises(ValueError): audit(good().replace(TARGETS[0], 'wrong'))
+    def test_truncated(self):
+        with self.assertRaises(ValueError): audit(good()[:-1])
+    def test_duplicate(self):
+        with self.assertRaises(ValueError): audit(good()+f"\n'{TARGETS[0]}' depends on axioms: []")
+    def test_sorry(self):
+        with self.assertRaises(ValueError): audit(good().replace('Quot.sound', 'sorryAx', 1))
+    def test_native(self):
+        with self.assertRaises(ValueError): audit(good().replace('Quot.sound','Lean.ofReduceBool',1))
+    def test_custom(self):
+        with self.assertRaises(ValueError): audit(good().replace('Quot.sound','Hidden.unproved',1))
+    def test_empty_log(self):
+        with self.assertRaises(ValueError): audit('')
+    def test_repeated_axiom(self):
+        with self.assertRaises(ValueError): audit(good().replace('Quot.sound','propext',1))
 
-def accepted(text):
-    result = subprocess.run(
-        [sys.executable, str(Path(__file__).with_name("audit_axioms.py"))],
-        input=text, text=True, capture_output=True, check=False,
-    )
-    return result.returncode == 0
-
-
-class AxiomAuditTests(unittest.TestCase):
-    def test_standard_axioms_accepted(self):
-        self.assertTrue(accepted(valid_report()))
-
-    def test_placeholder_rejected(self):
-        self.assertFalse(accepted(valid_report().replace("propext", "sorryAx", 1)))
-
-    def test_native_trust_rejected(self):
-        self.assertFalse(accepted(valid_report().replace("propext", "Lean.ofReduceBool", 1)))
-
-    def test_custom_axiom_rejected(self):
-        self.assertFalse(accepted(valid_report().replace("propext", "unproved_hypothesis", 1)))
-
-    def test_missing_output_rejected(self):
-        self.assertFalse(accepted(""))
-        self.assertFalse(accepted("\n".join(valid_report().splitlines()[1:])))
-
-    def test_duplicate_rejected(self):
-        self.assertFalse(accepted(valid_report() + valid_report().splitlines()[0]))
-
-    def test_error_rejected(self):
-        self.assertFalse(accepted(valid_report() + "\nAudit.lean:1: error: failed"))
-
-
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == '__main__': unittest.main()

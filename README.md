@@ -1,88 +1,52 @@
-# JSP-000690: complete chromatic-critical hypergraph formalization
+# JSP-000690 / Erdős 834: both meanings of 3-critical
 
-This Lean 4 project proves the **chromatic** formulation of
-[JSP-000690](https://github.com/TheJustinSunPrize/awards/blob/main/problems/catalog-0601-0700.md#JSP-000690):
-there exists a simple 3-uniform hypergraph with chromatic number exactly 3,
-every proper subhypergraph 2-colorable, and minimum degree at least 7.
+This version resolves the degree-seven existence question under **both** standard meanings of criticality. It upgrades the same account's chromatic-only submission in [awards PR #842](https://github.com/TheJustinSunPrize/awards/pull/842); it is not a second submission for the same work.
 
-The mathematical construction is **Ruiliang Li's**, not a new discovery here.
-It is the nine-vertex, twenty-two-edge graph in equation (5) of
-[arXiv:2512.24850v1](https://arxiv.org/html/2512.24850v1#S4).
-The minimum degree is exactly 7; the degrees are `(10,7,7,7,7,7,7,7,7)`.
-
-This is a later, separately written formalization prepared with OpenAI Codex
-for the GitHub account `x2515102083`. Earlier formalizations and submissions
-exist. **No first-formalization priority, independent human review, new
-mathematical solution, or award entitlement is claimed.** See
-[ATTRIBUTION.md](ATTRIBUTION.md) for the disclosure and prior-work links.
-
-## Reproduce
-
-Install [elan](https://github.com/leanprover/elan), then run:
-
-```sh
-git clone --branch proof-jsp-000690 https://github.com/x2515102083/jsp-000690-lean.git
-cd jsp-000690-lean
-lake build
-lake env lean Audit.lean
-lake env leanchecker --verbose JSP690
-lake env leanchecker --fresh --verbose JSP690
-python3 scripts/crosscheck.py
-```
-
-Alternatively, `python3 scripts/verify.py --clean` performs a clean build,
-the fail-closed axiom audit, both replay modes, the finite cross-check, and
-seven regression tests of the audit parser, checking every exit status.
-
-For a fail-closed axiom allowlist check (Bash):
-
-```sh
-set -o pipefail
-lake env lean Audit.lean | python3 scripts/audit_axioms.py
-```
-
-The toolchain is pinned to `leanprover/lean4:v4.35.0-rc2`, release commit
-`11acb17ec6b07a8f9e9173e6845197929540936b`. This is an explicitly pinned
-release candidate, not a claim that prize maintainers have approved that version.
-Only bundled `Std`/Lean libraries are imported. **No Mathlib and no external
-Lake packages are required.** The Python scripts require only the standard
-library and are not used to construct or justify the Lean proof.
-
-## What the theorem actually proves
-
-The entry point is `JSP690.jsp000690` in [JSP690.lean](JSP690.lean).
-
-| Mathematical requirement | Lean declaration / representation |
+| Meaning of criticality | Formal conclusion |
 | --- | --- |
-| Finite vertex set | `Fin 9`; the paper's labels `1..9` become `0..8` |
-| Simple 3-uniform hypergraph | `liGraph_simple`: duplicate-free list of strictly increasing triples |
-| All binary colorings fail | `binary_obstruction` and the general `binaryColorings_complete` theorem |
-| Chromatic number exactly 3 | `liGraph_chromatic_number`: proper 3-coloring and no `m`-coloring for any `m < 3` |
-| Every edge deletion has chromatic number exactly 2 | `liGraph_deleted_edge_chromatic_two` |
-| Every vertex deletion has chromatic number exactly 2 | `liGraph_deleted_vertex_chromatic_two` |
-| Every proper subhypergraph is 2-colorable | `liGraph_all_proper_subgraphs`, with arbitrary surviving vertex predicate and edge sublist |
-| Minimum degree exactly 7 | `liGraph_minimum_degree` and `liGraph_degrees` |
+| Weak chromatic number exactly 3, dropping after deleting any edge or vertex | Yes: Li's 9-vertex, 22-edge construction, minimum degree exactly 7. All proper subhypergraphs are also proved 2-colorable. |
+| Transversal number exactly 3, dropping after deleting any edge | No: **every vertex** has degree at most 6, for arbitrary finite simple 3-uniform hypergraphs. The bound is attained by the complete 3-graph on 5 vertices. |
 
-Coloring is **weak** hypergraph coloring: each triple must contain two
-differently colored vertices. It is not rainbow/strong coloring. For a vertex
-deletion, the color on the removed vertex is irrelevant: the quantified total
-function restricts to a coloring of the surviving vertices. The auxiliary
-Python test separately enumerates colorings on the eight surviving vertices.
+**Main theorem:** `JSP690Complete.complete_resolution`, in [Complete.lean](Complete.lean). It states both answers separately and adds sharpness of the transversal bound. There are no extra mathematical hypotheses in this combined theorem. The two meanings are not identified with each other.
 
-The finite checks use Lean's kernel-reduced `decide`. The completeness lemma
-proves that enumeration covers **every** function `Fin n → Bool`; an unproved
-claim that a mask search is exhaustive is not assumed. The main theorem has no
-unproved mathematical premises and no placeholder proof terms.
+This is complete for the original minimum-degree-seven existence question, not every theorem in the source paper: the separate universal bound of ten edges is not asserted here. The current prize catalog explicitly uses the chromatic wording; the transversal supplement also covers the alternative reading raised in [scope issue #882](https://github.com/TheJustinSunPrize/awards/issues/882).
 
-## Scope and prize status
+## Sources and contribution
 
-This proves the full chromatic question explicitly stated in the current JSP
-catalog and Li's Theorem 1.2. It does **not** prove the separate transversal
-number (`tau`-criticality) theorem, does not formalize every result in Li's paper,
-and does not resolve competing priority claims.
+The mathematical resolution is attributed to **Ruiliang Li**, [arXiv:2512.24850v1](https://arxiv.org/abs/2512.24850v1). The transversal argument uses the classical (2,2) set-pairs bound. No new mathematical discovery is claimed.
 
-See [VERIFICATION.md](VERIFICATION.md) for the actual verification record.
-Repository CI and local verification are not prize approval. Submission,
-statement review, safe-toolchain review, attribution, priority, identity checks,
-award assessment, and payment remain separate official decisions. No private
-contact details, identity documents, or payment addresses are included here.
+`JSP690.lean` is **byte-for-byte unchanged** from this repository's original commit `05e214a2d112513abd5c4a43fa7e40358457de82`. It now compiles on pinned stable Lean 4.32.1, instead of the original release candidate.
+
+The new `Transversal.lean` gives a separately written elementary proof of the set-pairs bound, by stars and two disjoint pairs, followed by the universal pointwise degree theorem. `Complete.lean` joins it to the existing chromatic proof. See [the mathematical proof and statement correspondence](PROOF.md) and [attribution, AI assistance and prior work](ATTRIBUTION.md).
+
+**An earlier complete formalization covering both readings already exists** in `plby/lean-proofs`, commit `8822f7ddef30fadbd92e1c6ab4ed897af356af5e`, `src/latest/ErdosProblems/Erdos834.lean`. It was consulted during scope review. This upgrade is not a first-formalization claim and does not displace any earlier author or timestamp. That source is neither imported nor redistributed here.
+
+## Reproduction
+
+Required: Git, Python 3.11 or newer, and the exact Lean toolchain in `lean-toolchain`:
+
+- Lean `v4.32.1`, release commit `f054605aea4b840552cca2e725580bffd1e1b704`.
+- Mathlib `520045ab14e26149ee970e2e617ca04b09bde5d6`.
+- All nine dependency revisions are fixed in the committed manifest.
+
+From a clean checkout of the selected branch and commit:
+
+```sh
+python3 bootstrap.py
+lake exe cache get .lake/packages/mathlib/Mathlib/Data/Finset/Powerset.lean .lake/packages/mathlib/Mathlib/Data/Finset/Prod.lean .lake/packages/mathlib/Mathlib/Data/Fintype/Powerset.lean
+python3 scripts/verify.py
+```
+
+On Windows use `python` in place of `python3`. The bootstrap script refuses to overwrite an existing dependency checkout at a different revision or with modified tracked source. It does not run `lake update`.
+
+The verifier runs `lake build`, fresh warning-as-error elaboration of all three local modules, a fail-closed 12-root axiom audit, and `leanchecker --verbose JSP690 Transversal Complete`. It then runs ten axiom-parser regression tests and the auxiliary chromatic and transversal Python checks. Audited source hashes and lockfiles must remain unchanged.
+
+Only `propext`, `Classical.choice`, and `Quot.sound` are permitted by the audit. There is no `sorry`, `admit`, project mathematical axiom, `unsafe`, or `native_decide` in the four audited Lean files. Concrete finite facts use ordinary kernel-checked `decide`.
+
+## Verification boundary
+
+See [VERIFICATION.md](VERIFICATION.md). The verifier produces timestamped commands, exit codes, source hashes and logs under `verification-output/`. The checked commit is recorded by CI. A successful contributor workflow is not organizer-designated verification or an award decision.
+
+Leanchecker replays the local declarations with Lean's own kernel and the pinned imported compiled libraries. It is **not** a separate kernel implementation, independent human review, or a fresh source rebuild/replay of all Mathlib. The auxiliary exhaustive checks are not proof premises.
+
+Submission, priority, any recognition, recipient identity and payment remain for the prize process. No public claim email, identity declaration, award status or payment request is created by this repository update.
