@@ -5,6 +5,9 @@ class CompleteAuditTests(unittest.TestCase):
     def test_good_report(self):
         self.assertEqual(parse_axioms("'A.t' depends on axioms: [propext, Quot.sound]\n", {'A.t'}),
                          {'A.t':['propext','Quot.sound']})
+    def test_no_axioms_report(self):
+        self.assertEqual(parse_axioms("'A.t' does not depend on any axioms\n", {'A.t'}),
+                         {'A.t': []})
     def test_empty_report(self):
         with self.assertRaises(ValueError): parse_axioms('', {'A.t'})
     def test_wrong_target(self):

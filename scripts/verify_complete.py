@@ -57,15 +57,22 @@ def scan(text: str) -> str:
 def parse_axioms(text: str, targets: set[str]) -> dict[str, list[str]]:
     found = {}
     for line in text.splitlines():
-        m = re.fullmatch(r"'([^']+)' depends on axioms: \[([^\]]*)\]", line.strip())
-        if not m:
+        stripped = line.strip()
+        m = re.fullmatch(r"'([^']+)' depends on axioms: \[([^\]]*)\]", stripped)
+        no_axioms = re.fullmatch(r"'([^']+)' does not depend on any axioms", stripped)
+        if m:
+            name = m[1]
+            raw_axioms = m[2]
+        elif no_axioms:
+            name = no_axioms[1]
+            raw_axioms = ''
+        else:
             if line.strip():
                 raise ValueError('Unexpected audit output: ' + line[:150])
             continue
-        name = m[1]
         if name not in targets or name in found:
             raise ValueError('Unexpected or duplicate theorem report: ' + name)
-        axioms = [x.strip() for x in m[2].split(',') if x.strip()]
+        axioms = [x.strip() for x in raw_axioms.split(',') if x.strip()]
         if not set(axioms) <= ALLOWED:
             raise ValueError('Unapproved axiom dependency: ' + name)
         found[name] = axioms
