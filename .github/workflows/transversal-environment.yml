@@ -1,0 +1,75 @@
+name: Transversal development environment
+on:
+  push:
+    branches: ['proof/both-interpretations-20260918']
+    paths: ['.github/workflows/transversal-environment.yml']
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install exact Lean release and pinned library
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/jsp690-env"
+          cd "$RUNNER_TEMP/jsp690-env"
+          curl --fail --location --retry 3 https://github.com/leanprover/lean4/releases/download/v4.34.0/lean-4.34.0-linux.tar.zst -o lean.tar.zst
+          echo 'caaa98356098c85dc0fcbbd28e1ec66f39eb6551829972b752ff20e1286b646b  lean.tar.zst' | sha256sum --check
+          tar --zstd -xf lean.tar.zst
+          mv lean-4.34.0-linux lean
+          rm lean.tar.zst
+          export PATH="$PWD/lean/bin:$PATH"
+          lean --version
+          mkdir project
+          cd project
+          printf 'leanprover/lean4:v4.34.0\n' > lean-toolchain
+          printf 'name = "transversal"\nversion = "0.1.0"\ndefaultTargets = ["Transversal"]\n\n[[require]]\nname = "mathlib"\ngit = "https://github.com/leanprover-community/mathlib4.git"\nrev = "5ed2965256430c3649e86755f9576b54eca72435"\n\n[[lean_lib]]\nname = "Transversal"\n' > lakefile.toml
+          lake update
+          lake exe cache get Mathlib/Data/Finset/Card.lean Mathlib/Data/Finset/Powerset.lean Mathlib/Data/Finset/Union.lean Mathlib/Tactic.lean
+          printf 'import Mathlib.Data.Finset.Powerset\nimport Mathlib.Tactic\n#check Finset.card_eq_two\n#check Finset.card_eq_three\n#check Finset.card_filter_le_iff\n#check Finset.card_bij\n#check Finset.card_powersetCard\n#check Finset.card_image_of_injective\n' > Probe.lean
+          lake env lean Probe.lean || true
+          cp "$GITHUB_WORKSPACE/JSP690.lean" .
+          lake env lean -DwarningAsError=true JSP690.lean
+          git -C .lake/packages/mathlib rev-parse HEAD
+          cat lake-manifest.json
+      - name: Package reproducible development environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/jsp690-env"
+          find lean project/.lake -type f \( -name '*.a' -o -name '*.c' -o -name '*.o' -o -name '*.ilean' \) -delete
+          find project/.lake -type d -name .git -prune -exec rm -rf {} +
+          mkdir "$RUNNER_TEMP/env-parts"
+          tar -czf - lean project | split -b 400M - "$RUNNER_TEMP/env-parts/lean-mathlib.tar.gz.part-"
+          cd "$RUNNER_TEMP/env-parts"
+          sha256sum * | tee SHA256SUMS
+          du -h *
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: transversal-env-aa
+          path: ${{ runner.temp }}/env-parts/*part-aa
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: transversal-env-ab
+          path: ${{ runner.temp }}/env-parts/*part-ab
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: transversal-env-ac
+          path: ${{ runner.temp }}/env-parts/*part-ac
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: transversal-env-hashes
+          path: ${{ runner.temp }}/env-parts/SHA256SUMS
+          retention-days: 7
